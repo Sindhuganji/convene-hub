@@ -14,4 +14,6 @@ mongoose.connect(process.env.MONGO_URI)
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/events", require("./routes/eventRoutes"));
 
-app.listen(5000, () => console.log("Server running"));
+app.listen(5000, "0.0.0.0", () => {
+  console.log("Server running on http://0.0.0.0:5000");
+});

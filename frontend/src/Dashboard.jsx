@@ -1,6 +1,7 @@
+import './ui.css';
+
 import {
   useEffect,
-  useMemo,
   useState,
 } from 'react';
 
@@ -8,81 +9,50 @@ import { useNavigate } from 'react-router-dom';
 
 const API_BASE = "http://localhost:5000/api";
 
-const initialFormState = {
-  title: "",
-  description: "",
-  date: "",
-};
+const initialForm = { title: "", description: "", date: "" };
 
-function EventModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  formData,
-  setFormData,
-  saving,
-  isEdit,
-}) {
-  if (!isOpen) return null;
+function EventModal({ open, onClose, formData, setFormData, onSubmit, saving, isEdit }) {
+  if (!open) return null;
 
-  const handleChange = (e) =>
+  const onChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md">
-      <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 p-8 shadow-[0_25px_80px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+    <div className="modal-overlay">
+      <div className="modal-card">
+        <h2>{isEdit ? "Edit Event" : "Create Event"}</h2>
+        <p className="subtitle">Fill details and save your event.</p>
 
-        <h3 className="text-2xl font-bold text-white mb-2">
-          {isEdit ? "Edit Event" : "Create Event"}
-        </h3>
-        <p className="text-sm text-gray-300 mb-6">
-          {isEdit ? "Update your event details." : "Fill details to create event."}
-        </p>
-
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="form-stack">
           <input
             type="text"
             name="title"
-            required
+            placeholder="Event title"
             value={formData.title}
-            onChange={handleChange}
-            placeholder="Event Title"
-            className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-400"
+            onChange={onChange}
+            required
           />
-
           <textarea
             name="description"
+            placeholder="Event description"
             rows={4}
             value={formData.description}
-            onChange={handleChange}
-            placeholder="Event Description"
-            className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            onChange={onChange}
           />
-
           <input
             type="date"
             name="date"
-            required
             value={formData.date}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            onChange={onChange}
+            required
           />
 
-          <div className="flex justify-end gap-3 pt-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20"
-            >
+          <div className="modal-actions">
+            <button type="button" className="btn-outline" onClick={onClose}>
               Cancel
             </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 hover:scale-105 transition"
-            >
-              {saving ? "Saving..." : "Submit"}
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? "Saving..." : isEdit ? "Update Event" : "Create Event"}
             </button>
           </div>
         </form>
@@ -93,132 +63,187 @@ function EventModal({
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const token = useMemo(() => localStorage.getItem("token"), []);
-
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEventId, setEditingEventId] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState(initialFormState);
+  const [openModal, setOpenModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState(initialForm);
+
+  const token = localStorage.getItem("token");
+
+  const authHeaders = (withJson = false) => ({
+    ...(withJson ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  });
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    fetchEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchEvents = async () => {
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
       const res = await fetch(`${API_BASE}/events`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(false),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error("Failed to fetch events");
-      setEvents(data);
+      if (!res.ok) throw new Error(data.message || "Failed to fetch events");
+      setEvents(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!token) return navigate("/login");
-    fetchEvents();
-  }, []);
+  const openCreate = () => {
+    setEditingId(null);
+    setFormData(initialForm);
+    setOpenModal(true);
+  };
 
-  const handleSubmitEvent = async (e) => {
+  const openEdit = (event) => {
+    setEditingId(event._id);
+    setFormData({
+      title: event.title || "",
+      description: event.description || "",
+      date: event.date ? new Date(event.date).toISOString().slice(0, 10) : "",
+    });
+    setOpenModal(true);
+  };
+
+  const closeModal = () => {
+    setOpenModal(false);
+    setEditingId(null);
+    setFormData(initialForm);
+  };
+
+  const saveEvent = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError("");
 
     try {
-      const endpoint = editingEventId
-        ? `${API_BASE}/events/${editingEventId}`
-        : `${API_BASE}/events`;
+      const isEdit = Boolean(editingId);
+      const url = isEdit ? `${API_BASE}/events/${editingId}` : `${API_BASE}/events`;
+      const method = isEdit ? "PUT" : "POST";
 
-      const method = editingEventId ? "PUT" : "POST";
-
-      await fetch(endpoint, {
+      const res = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: authHeaders(true),
         body: JSON.stringify(formData),
       });
 
-      fetchEvents();
-      setIsModalOpen(false);
-      setFormData(initialFormState);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to save event");
+
+      closeModal();
+      await fetchEvents();
+    } catch (err) {
+      setError(err.message || "Something went wrong");
     } finally {
       setSaving(false);
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this event?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/events/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(false),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to delete event");
+      setEvents((prev) => prev.filter((e) => e._id !== id));
+    } catch (err) {
+      setError(err.message || "Something went wrong");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-indigo-900 text-white p-6">
+    <main className="page dashboard-page">
+      <div className="bg-blob blob-1" />
+      <div className="bg-blob blob-2" />
+      <div className="bg-blob blob-3" />
 
-      {/* Navbar */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Convene Hub</h1>
-
-        <div className="flex gap-3">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-2 rounded-xl hover:scale-105 transition"
-          >
-            + Create Event
-          </button>
-
-          <button
-            onClick={() => {
-              localStorage.clear();
-              navigate("/login");
-            }}
-            className="bg-red-500 px-4 py-2 rounded-xl hover:bg-red-600"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Empty / Events */}
-      {loading ? (
-        <p>Loading...</p>
-      ) : events.length === 0 ? (
-        <div className="flex justify-center">
-          <div className="bg-white/10 p-8 rounded-2xl text-center backdrop-blur-xl">
-            <h2 className="text-xl font-semibold">No events found</h2>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="mt-4 bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-2 rounded-xl"
-            >
-              Create Event
+      <div className="dashboard-container">
+        <header className="topbar glass-card">
+          <h1>Convene Hub</h1>
+          <div className="topbar-actions">
+            <button className="btn-primary" onClick={openCreate}>
+              + Create Event
+            </button>
+            <button className="btn-outline" onClick={handleLogout}>
+              Logout
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {events.map((event) => (
-            <div
-              key={event._id}
-              className="bg-white/10 p-5 rounded-2xl backdrop-blur-xl hover:scale-105 transition"
-            >
-              <h3 className="text-lg font-bold">{event.title}</h3>
-              <p className="text-gray-300">{event.description}</p>
-              <p className="text-sm text-gray-400 mt-2">{event.date}</p>
+        </header>
+
+        {error && <div className="error-box mt-16">{error}</div>}
+
+        <section className="events-section">
+          {loading ? (
+            <div className="glass-card empty-card">
+              <p>Loading events...</p>
             </div>
-          ))}
-        </div>
-      )}
+          ) : events.length === 0 ? (
+            <div className="glass-card empty-card">
+              <h2>No events found</h2>
+              <p>Create your first event to get started.</p>
+              <button className="btn-primary" onClick={openCreate}>
+                Create Event
+              </button>
+            </div>
+          ) : (
+            <div className="events-grid">
+              {events.map((event) => (
+                <article key={event._id} className="glass-card event-card">
+                  <h3>{event.title}</h3>
+                  <p>{event.description || "No description provided."}</p>
+                  <span>
+                    {event.date ? new Date(event.date).toLocaleDateString() : "No date"}
+                  </span>
+
+                  <div className="event-actions">
+                    <button className="btn-outline" onClick={() => openEdit(event)}>
+                      Edit
+                    </button>
+                    <button className="btn-outline" onClick={() => handleDelete(event._id)}>
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
 
       <EventModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSubmitEvent}
+        open={openModal}
+        onClose={closeModal}
         formData={formData}
         setFormData={setFormData}
+        onSubmit={saveEvent}
         saving={saving}
-        isEdit={false}
+        isEdit={Boolean(editingId)}
       />
-    </div>
+    </main>
   );
 }
