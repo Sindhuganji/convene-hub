@@ -1,5 +1,5 @@
 import {
-  BrowserRouter as Router,
+  Navigate,
   Route,
   Routes,
 } from 'react-router-dom';
@@ -8,19 +8,13 @@ import Dashboard from './Dashboard';
 import Login from './Login';
 import Register from './Register';
 
-function App() {
+export default function App() {
   return (
-    <Router>
-      <Routes>
-        {/* BOTH routes for login */}
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-
-        <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+    </Routes>
   );
 }
-
-export default App;
