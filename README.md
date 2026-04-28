@@ -156,19 +156,17 @@ Authorization: Bearer <token>
 
 ## 🖼️ Screenshots
 
-> Add screenshots here after deployment / UI finalization.
+### 🔐 Login Page
+![Login](./login.png)
 
-- Login Page
-- Register Page
-- Dashboard
-- Create Event Modal
+### 🧾 Register Page
+![Register](./login.png) <!-- replace if you have separate register image -->
 
-Example markdown:
-```md
-![Login](login.png)
-![Dashboard](dashboard.png)
-![Event Creation](eventcreation.png)
-```
+### 📊 Dashboard
+![Dashboard](./dashboard.png)
+
+### 📅 Event Creation Modal
+![Event Creation](./eventcreation.png)
 
 ---
 
