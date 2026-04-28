@@ -165,8 +165,9 @@ Authorization: Bearer <token>
 
 Example markdown:
 ```md
-![Login](./screenshots/login.png)
-![Dashboard](./screenshots/dashboard.png)
+![Login](login.png)
+![Dashboard](dashboard.png)
+![Event Creation](eventcreation.png)
 ```
 
 ---
