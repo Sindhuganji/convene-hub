@@ -185,11 +185,7 @@ Example markdown:
 
 ## 👨‍💻 Author
 
-**Your Name**  
-Full Stack Developer (MERN)
-
-- GitHub: [https://github.com/your-username](https://github.com/your-username)
-- LinkedIn: [https://linkedin.com/in/your-profile](https://linkedin.com/in/your-profile)
+**Pushpa Sri Sindhu**  
 
 ---
 
